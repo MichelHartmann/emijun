@@ -226,14 +226,14 @@
         const svgHeightMm = spacingMm * (repetitions - 1) + fontSizeMm + 2 * padding;
 
         let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="${svgWidthMm}mm" height="${svgHeightMm}mm" viewBox="0 0 ${mmToPx(svgWidthMm)} ${mmToPx(svgHeightMm)}" version="1.1" xmlns="http://www.w3.org/2000/svg">
+<svg width="${svgWidthMm}mm" height="${svgHeightMm}mm" viewBox="0 0 ${svgWidthMm} ${svgHeightMm}" version="1.1" xmlns="http://www.w3.org/2000/svg">
 `;
 
         // Add each text element
         for (let i = 0; i < repetitions; i++) {
             const y = padding + (i * spacingMm) + fontSizeMm; // Adjust for text baseline
             svgContent += `
-    <text x="${padding}mm" y="${y}mm" font-family="${escapedFontFamily}" font-size="${fontSize}mm" fill="black">${escapedText}</text>`;
+    <text x="${padding}" y="${y}" font-family="${escapedFontFamily}" font-size="${fontSize}px" fill="black">${escapedText}</text>`;
         }
 
         svgContent += `
