@@ -233,7 +233,7 @@
         for (let i = 0; i < repetitions; i++) {
             const y = padding + (i * spacingMm) + fontSizeMm; // Adjust for text baseline
             svgContent += `
-    <text x="${padding}mm" y="${y}mm" font-family="${escapedFontFamily}" font-size="${fontSize}mm" fill="black">${escapedText}</text>`;
+    <text x="-${textWidthMm + padding}mm" y="-${y - fontSizeMm/2}mm" font-family="${escapedFontFamily}" font-size="${fontSize}mm" fill="black" transform="scale(-1)">${escapedText}</text>`;
         }
 
         svgContent += `
