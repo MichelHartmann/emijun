@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text SVG Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #createBtn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        #createBtn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        #downloadBtn {
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+            color: white;
+        }
+
+        #downloadBtn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(86, 171, 47, 0.3);
+        }
+
+        .preview-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px dashed #ddd;
+            text-align: center;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-text {
+            color: #666;
+            font-style: italic;
+        }
+
+        #svgPreview {
+            max-width: 100%;
+            max-height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background: white;
+        }
+
+        canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Text SVG Generator</h1>
+        
+        <div class="form-group">
+            <label for="textInput">Text:</label>
+            <input type="text" id="textInput" placeholder="Enter your text here..." value="Sample Text">
+        </div>
+
+        <div class="form-group">
+            <label for="fontInput">Font Name:</label>
+            <input type="text" id="fontInput" placeholder="Font name..." value="Segoe Print">
+        </div>
+
+        <div class="button-group">
+            <button id="createBtn">Create SVG</button>
+            <button id="downloadBtn">Download SVG</button>
+        </div>
+
+        <div class="preview-container">
+            <div class="preview-text" id="previewText">Click "Create SVG" to generate preview</div>
+        </div>
+    </div>
+
+    <canvas id="measureCanvas"></canvas>
+
+    <script>
+        let currentSvgData = '';
+        
+        const textInput = document.getElementById('textInput');
+        const fontInput = document.getElementById('fontInput');
+        const createBtn = document.getElementById('createBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewContainer = document.querySelector('.preview-container');
+        const previewText = document.getElementById('previewText');
+        const measureCanvas = document.getElementById('measureCanvas');
+        const ctx = measureCanvas.getContext('2d');
+
+        function mmToPx(mm) {
+            // Assuming 96 DPI (standard for web)
+            return mm * 96 / 25.4;
+        }
+
+        function pxToMm(px) {
+            return px * 25.4 / 96;
+        }
+
+        function measureTextHeight(text, fontFamily) {
+            // Start with a reasonable font size
+            let fontSize = 100;
+            ctx.font = `${fontSize}px "${fontFamily}"`;
+            
+            // Measure the text
+            const metrics = ctx.measureText(text);
+            const actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+            
+            return { fontSize, actualHeight };
+        }
+
+        function calculateFontSizeFor3_5mm(text, fontFamily) {
+            const targetHeightPx = mmToPx(3.5);
+            const { fontSize: baseFontSize, actualHeight: baseHeight } = measureTextHeight(text, fontFamily);
+            
+            // Calculate the required font size to achieve 3.5mm height
+            const requiredFontSize = (targetHeightPx / baseHeight) * baseFontSize;
+            
+            return requiredFontSize;
+        }
+
+        function escapeXML(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+
+        function createSVG(text, fontFamily) {
+            const fontSize = calculateFontSizeFor3_5mm(text, fontFamily);
+            const spacingMm = 13;
+            const spacingPx = mmToPx(spacingMm);
+            const repetitions = 10;
+            
+            // Escape special characters for XML/SVG
+            const escapedText = escapeXML(text);
+            const escapedFontFamily = escapeXML(fontFamily);
+            
+            // Calculate SVG dimensions
+            ctx.font = `${fontSize}px "${fontFamily}"`;
+            const textWidth = ctx.measureText(text).width;
+            const svgWidth = textWidth + 40; // Add some padding
+            const svgHeight = spacingPx * (repetitions - 1) + mmToPx(3.5) + 40; // Height for all texts plus padding
+
+            let svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">`;
+
+            // Add each text element
+            for (let i = 0; i < repetitions; i++) {
+                const y = 20 + (i * spacingPx) + mmToPx(3.5) * 0.8; // Adjust for text baseline
+                svgContent += `
+    <text x="20" y="${y}" font-family="${escapedFontFamily}" font-size="${fontSize}" fill="black">${escapedText}</text>`;
+            }
+
+            svgContent += `
+</svg>`;
+
+            return svgContent;
+        }
+
+        function displaySVGPreview(svgContent) {
+            // Clean up any existing object URLs
+            const existingImg = previewContainer.querySelector('img');
+            if (existingImg && existingImg.src.startsWith('blob:')) {
+                URL.revokeObjectURL(existingImg.src);
+            }
+            
+            // Directly embed the SVG content
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
+            const svgElement = svgDoc.documentElement;
+            
+            // Add CSS styling to the SVG
+            svgElement.style.maxWidth = '100%';
+            svgElement.style.maxHeight = '400px';
+            svgElement.style.border = '1px solid #ddd';
+            svgElement.style.borderRadius = '10px';
+            svgElement.style.background = 'white';
+            
+            previewContainer.innerHTML = '';
+            previewContainer.appendChild(svgElement);
+        }
+
+        createBtn.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            const fontFamily = fontInput.value.trim();
+
+            if (!text) {
+                alert('Please enter some text');
+                return;
+            }
+
+            if (!fontFamily) {
+                alert('Please enter a font name');
+                return;
+            }
+
+            try {
+                currentSvgData = createSVG(text, fontFamily);
+                displaySVGPreview(currentSvgData);
+            } catch (error) {
+                console.error('Error creating SVG:', error);
+                alert('Error creating SVG. Please check your inputs.');
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            const fontFamily = fontInput.value.trim();
+
+            if (!text) {
+                alert('Please enter some text');
+                return;
+            }
+
+            if (!fontFamily) {
+                alert('Please enter a font name');
+                return;
+            }
+
+            try {
+                // Generate fresh SVG with current input values
+                currentSvgData = createSVG(text, fontFamily);
+                
+                // Clean text and font for filename (remove special characters)
+                const cleanText = text.replace(/[^a-zA-Z0-9]/g, '_');
+                const cleanFont = fontFamily.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                const filename = `point88-${cleanFont}-${cleanText}.svg`;
+                
+                const blob = new Blob([currentSvgData], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Error creating SVG for download:', error);
+                alert('Error creating SVG for download. Please check your inputs.');
+            }
+        });
+
+        // Enable creating SVG with Enter key
+        textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createBtn.click();
+        });
+        
+        fontInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createBtn.click();
+        });
+    </script>
+</body>
+</html>
